@@ -5,8 +5,10 @@ namespace DTL\Extension\Fink\Console\Command;
 use Amp\Loop;
 use DTL\Extension\Fink\Console\DisplayBuilder;
 use DTL\Extension\Fink\Console\HeaderParser;
+use DTL\Extension\Fink\DispatcherBuilder;
 use DTL\Extension\Fink\Model\DispatcherBuilderFactory;
 use DTL\Extension\Fink\Model\Dispatcher;
+use LayerShifter\TLDExtract\Extract;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -47,6 +49,7 @@ class CrawlCommand extends Command
     private const OPT_CLIENT_SECURITY_LEVEL = 'client-security-level';
     private const OPT_DISPLAY = 'display';
     private const OPT_STDOUT = 'stdout';
+    private const OPT_REQUIRE_REFERRER_TLD = 'require-referrer-tld';
 
     /**
      * @var DispatcherBuilderFactory
@@ -108,6 +111,7 @@ class CrawlCommand extends Command
         $this->addOption(self::OPT_INCLUDE_LINK, null, InputOption::VALUE_REQUIRED|InputOption::VALUE_IS_ARRAY, 'Add an additional URL to the set of URLs under the base URL', []);
         $this->addOption(self::OPT_DISPLAY, 'd', InputOption::VALUE_REQUIRED, 'Display specification, e.g. +memory', '');
         $this->addOption(self::OPT_STDOUT, null, InputOption::VALUE_NONE, 'Stream directly to stdout (disable realtime display and out file)');
+        $this->addOption(self::OPT_REQUIRE_REFERRER_TLD, null, InputOption::VALUE_NONE, 'Only check links which have the origin TLD in the referrer');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -179,6 +183,7 @@ class CrawlCommand extends Command
         $maxBodySize = $this->castToInt($input->getOption(self::OPT_CLIENT_MAX_BODY_SIZE));
         $maxHeaderSize = $this->castToInt($input->getOption(self::OPT_CLIENT_MAX_HEADER_SIZE));
         $sslSecurityLevel = $input->getOption(self::OPT_CLIENT_SECURITY_LEVEL);
+        $requireReferrerTld = $input->getOption(self::OPT_REQUIRE_REFERRER_TLD);
 
         $builder = $this->factory->createForUrls($urls);
         $builder->maxConcurrency($maxConcurrency);
@@ -190,6 +195,15 @@ class CrawlCommand extends Command
         $builder->headers($this->headerParser->parseHeaders($headers));
         $builder->clientMaxBodySize($maxBodySize);
         $builder->clientMaxHeaderSize($maxHeaderSize);
+
+        if ($requireReferrerTld) {
+            try {
+                $extract = new Extract();
+                $result = $extract->parse($urls[0]);
+                DispatcherBuilder::$requireReferrerTld = $result->getRegistrableDomain();
+            } catch (\LayerShifter\TLDExtract\Exceptions\RuntimeException $e) {
+            }
+        }
 
         if ($sslSecurityLevel) {
             $builder->clientSecurityLevel($this->castToInt($sslSecurityLevel));

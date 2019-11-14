@@ -137,6 +137,11 @@ class DispatcherBuilder
      */
     private $publishToResource;
 
+    /**
+     * @var string
+     */
+    public static $requireReferrerTld;
+
     public function __construct(Urls $baseUrls)
     {
         $this->baseUrls = $baseUrls;

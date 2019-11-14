@@ -7,8 +7,10 @@ use Amp\Artax\Response;
 use DOMDocument;
 use DOMElement;
 use DOMXPath;
+use DTL\Extension\Fink\DispatcherBuilder;
 use DTL\Extension\Fink\Model\Exception\InvalidUrl;
 use Generator;
+use LayerShifter\TLDExtract\Extract;
 
 class Crawler
 {
@@ -67,7 +69,7 @@ class Crawler
             if (!$url->isHttp()) {
                 continue;
             }
-        
+
             $queue->enqueue($url);
         }
     }
