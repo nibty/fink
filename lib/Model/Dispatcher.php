@@ -7,6 +7,7 @@ use DTL\Extension\Fink\Model\Store\ImmutableReportStore;
 use DTL\Extension\Fink\Model\ImmutableReportStore as ImmutableReportStoreInterface;
 use Exception;
 use LayerShifter\TLDExtract\Extract;
+use PHPStan\Reflection\Php\PhpParameterFromParserNodeReflection;
 
 class Dispatcher
 {
@@ -68,7 +69,6 @@ class Dispatcher
             }
             
             $url = $this->queue->dequeue();
-            
             if (null === $url) {
                 return;
             }
@@ -79,22 +79,6 @@ class Dispatcher
 
     private function doDispatch(Url $url): void
     {
-        $referrer = (string) $url->referrer();
-        if ($referrer) {
-            try {
-                $extract = new Extract();
-                $result = $extract->parse($referrer);
-                $tld = $result->getRegistrableDomain();
-                if (
-                    DispatcherBuilder::$requireReferrerTld &&
-                    DispatcherBuilder::$requireReferrerTld !== $tld
-                ) {
-                    return;
-                }
-            } catch (\LayerShifter\TLDExtract\Exceptions\RuntimeException $e) {
-            }
-        }
-
         \Amp\asyncCall(function (Url $url) {
             $this->status->nbConcurrentRequests++;
             $reportBuilder = ReportBuilder::forUrl($url);

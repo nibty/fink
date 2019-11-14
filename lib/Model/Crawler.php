@@ -41,6 +41,22 @@ class Crawler
             $body .= $chunk;
         }
 
+        $referrer = (string) $documentUrl->referrer();
+        if ($referrer) {
+            try {
+                $extract = new Extract();
+                $result = $extract->parse($referrer);
+                $tld = $result->getRegistrableDomain();
+                if (
+                    DispatcherBuilder::$requireReferrerTld &&
+                    DispatcherBuilder::$requireReferrerTld !== $tld
+                ) {
+                    return;
+                }
+            } catch (\LayerShifter\TLDExtract\Exceptions\RuntimeException $e) {
+            }
+        }
+
         $this->enqueueLinks(
             $this->loadXpath($body),
             Url::fromUrl($response->getRequest()->getUri()),
