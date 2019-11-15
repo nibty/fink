@@ -8,6 +8,7 @@ use DTL\Extension\Fink\Console\HeaderParser;
 use DTL\Extension\Fink\DispatcherBuilder;
 use DTL\Extension\Fink\Model\DispatcherBuilderFactory;
 use DTL\Extension\Fink\Model\Dispatcher;
+use DTL\Extension\Fink\Tld;
 use LayerShifter\TLDExtract\Extract;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command;
@@ -197,12 +198,7 @@ class CrawlCommand extends Command
         $builder->clientMaxHeaderSize($maxHeaderSize);
 
         if ($requireReferrerTld) {
-            try {
-                $extract = new Extract();
-                $result = $extract->parse($urls[0]);
-                DispatcherBuilder::$requireReferrerTld = $result->getRegistrableDomain();
-            } catch (\LayerShifter\TLDExtract\Exceptions\RuntimeException $e) {
-            }
+            DispatcherBuilder::$requireReferrerTld = Tld::getInstance()->getTld($urls[0]);
         }
 
         if ($sslSecurityLevel) {

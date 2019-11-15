@@ -9,6 +9,7 @@ use DOMElement;
 use DOMXPath;
 use DTL\Extension\Fink\DispatcherBuilder;
 use DTL\Extension\Fink\Model\Exception\InvalidUrl;
+use DTL\Extension\Fink\Tld;
 use Generator;
 use LayerShifter\TLDExtract\Extract;
 
@@ -41,21 +42,14 @@ class Crawler
             $body .= $chunk;
         }
 
-        $referrer = (string) $documentUrl->referrer();
-        if ($referrer) {
-            try {
-                $extract = new Extract();
-                $result = $extract->parse($referrer);
-                $tld = $result->getRegistrableDomain();
-                if (
-                    DispatcherBuilder::$requireReferrerTld &&
-                    DispatcherBuilder::$requireReferrerTld !== $tld
-                ) {
-                    return;
-                }
-            } catch (\LayerShifter\TLDExtract\Exceptions\RuntimeException $e) {
-            }
-        }
+//        $referrer = (string) $documentUrl->referrer();
+//        if ($referrer) {
+//            $tld = Tld::getInstance()->getTld($referrer);
+//            if (DispatcherBuilder::$requireReferrerTld && DispatcherBuilder::$requireReferrerTld !== $tld) {
+//                print(DispatcherBuilder::$requireReferrerTld . " != " . $tld . PHP_EOL);
+//                return;
+//            }
+//        }
 
         $this->enqueueLinks(
             $this->loadXpath($body),

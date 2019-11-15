@@ -5,6 +5,7 @@ namespace DTL\Extension\Fink\Model;
 use DTL\Extension\Fink\DispatcherBuilder;
 use DTL\Extension\Fink\Model\Store\ImmutableReportStore;
 use DTL\Extension\Fink\Model\ImmutableReportStore as ImmutableReportStoreInterface;
+use DTL\Extension\Fink\Tld;
 use Exception;
 use LayerShifter\TLDExtract\Extract;
 use PHPStan\Reflection\Php\PhpParameterFromParserNodeReflection;
@@ -82,19 +83,31 @@ class Dispatcher
         \Amp\asyncCall(function (Url $url) {
             $this->status->nbConcurrentRequests++;
             $reportBuilder = ReportBuilder::forUrl($url);
-        
-            try {
-                yield from $this->crawler->crawl($url, $this->queue, $reportBuilder);
-            } catch (Exception $exception) {
-                $reportBuilder->withException($exception);
+
+            $skip = false;
+            $referrer = (string) $url->referrer();
+            if ($referrer) {
+                $tld = Tld::getInstance()->getTld($referrer);
+                if (DispatcherBuilder::$requireReferrerTld && DispatcherBuilder::$requireReferrerTld !== $tld) {
+//                    print(DispatcherBuilder::$requireReferrerTld . " != " . $tld . PHP_EOL);
+                    $skip = true;
+                }
             }
-        
-            $report = $reportBuilder->build();
-            $this->publisher->publish($report);
-            $this->store->add($report);
-        
+
+            if (!$skip) {
+                try {
+                    yield from $this->crawler->crawl($url, $this->queue, $reportBuilder);
+                } catch (Exception $exception) {
+                    $reportBuilder->withException($exception);
+                }
+
+                $report = $reportBuilder->build();
+                $this->publisher->publish($report);
+                $this->store->add($report);
+                $this->status->nbFailures += $report->isSuccess() ? 0 : 1;
+            }
+
             $this->status->queueSize = count($this->queue);
-            $this->status->nbFailures += $report->isSuccess() ? 0 : 1;
             $this->status->lastUrl = $url->__toString();
             $this->status->requestCount++;
             $this->status->nbConcurrentRequests--;
